@@ -1,0 +1,96 @@
+/* =========================================
+   ESTILOS GLOBALES (RESTURADOS)
+   ========================================= */
+:root {
+    --primary: #2c3e50; --secondary: #3498db; --danger: #e74c3c;
+    --success: #2ecc71; --warning: #f39c12; --bg: #f4f7f6;
+    --text: #333; --white: #fff; --border: #ddd;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg); color: var(--text); line-height: 1.6;
+}
+
+/* NAVBAR */
+.navbar {
+    background: var(--primary); padding: 1rem 2rem;
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.navbar h2 { font-size: 1.5rem; }
+.menu-toggle { display: none; background: transparent; border: none; color: var(--white); font-size: 2rem; cursor: pointer; }
+.nav-links a { color: var(--white); text-decoration: none; margin-left: 1rem; font-weight: 500; transition: 0.3s; }
+.nav-links a:hover { color: var(--secondary); }
+
+/* CONTENEDORES Y TARJETAS DEL DASHBOARD */
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; min-height: calc(100vh - 160px); }
+.card { background: var(--white); border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+
+.stat-card { border-left: 4px solid var(--secondary); }
+.stat-card.success-border { border-left-color: var(--success); }
+.stat-card.danger-border { border-left-color: var(--danger); }
+.stat-card h3 { font-size: 0.9rem; color: #666; margin-bottom: 0.5rem; }
+.stat-card p { font-size: 1.8rem; font-weight: bold; color: var(--primary); }
+
+/* TABLAS (Para Inicio y Terapeutas) */
+table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: #fff; }
+table th, table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+table th { background-color: #f8f9fa; font-weight: 600; }
+
+/* BOTONES */
+.btn { display: inline-block; padding: 0.6rem 1.2rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: bold; text-align: center; transition: 0.2s; }
+.btn-primary { background: var(--secondary); color: var(--white); }
+.btn-danger { background: var(--danger); color: var(--white); }
+.btn-success { background: var(--success); color: var(--white); }
+.btn-full { width: 100%; }
+
+/* FORMULARIOS */
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; font-weight: 600; margin-bottom: 0.3rem; }
+.form-control { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 4px; }
+
+/* =========================================
+   ESTILOS DEL EDITOR (NUEVOS)
+   ========================================= */
+.editor-layout { display: flex; gap: 20px; align-items: flex-start; }
+.editor-sidebar { width: 350px; flex-shrink: 0; }
+.editor-main { flex-grow: 1; overflow: auto; background: #e9ecef; border-radius: 8px; padding: 15px; display: flex; justify-content: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+
+.btn-eleccion { cursor: pointer; transition: 0.3s; padding: 30px; text-align: center; width: 280px; background: #fff; border: 1px solid #ddd; border-radius: 12px; }
+.btn-eleccion:hover { border-color: var(--secondary); transform: translateY(-5px); }
+.btn-eleccion span.emoji { font-size: 5rem; display: block; margin-bottom: 15px; }
+
+/* BOTÓN FLOTANTE (FAB) - SIEMPRE A LA DERECHA */
+.fab-container {
+    position: fixed; bottom: 30px; right: 20px;
+    z-index: 9999; display: flex; flex-direction: column-reverse; align-items: center; gap: 15px;
+}
+.fab-main {
+    width: 60px; height: 60px; border-radius: 50%; background: var(--primary);
+    color: white; font-size: 24px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s;
+}
+.fab-container.active .fab-main { transform: rotate(45deg); background: var(--danger); }
+.fab-menu {
+    display: flex; flex-direction: column-reverse; gap: 12px;
+    opacity: 0; visibility: hidden; transform: translateY(20px); transition: 0.3s;
+}
+.fab-container.active .fab-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+.fab-item { display: flex; align-items: center; justify-content: flex-end; gap: 10px; background: transparent; border: none; cursor: pointer; }
+.fab-label { background: rgba(0,0,0,0.8); color: white; padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; white-space: nowrap; }
+.fab-icon { width: 45px; height: 45px; border-radius: 50%; background: white; color: var(--primary); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+.hidden { display: none !important; }
+#editor_canvas { touch-action: none; max-width: 100%; }
+
+@media (max-width: 768px) {
+    .menu-toggle { display: block; }
+    .nav-links { display: none; flex-direction: column; width: 100%; margin-top: 1rem; }
+    .nav-links.active { display: flex; }
+    .editor-layout { flex-direction: column; }
+    .editor-sidebar, .editor-main { width: 100%; }
+}
