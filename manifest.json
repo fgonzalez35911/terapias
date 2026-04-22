@@ -1,15 +1,40 @@
 {
-  "name": "SGR Reintegros",
+  "name": "SGR Terapias",
   "short_name": "SGR",
+  "description": "Sistema de Gestión de Reintegros",
   "start_url": "/terapias/index.php",
   "display": "standalone",
-  "background_color": "#f4f7f6",
-  "theme_color": "#2c3e50",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/1040/1040230.png",
+      "src": "/terapias/logo_sgr.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/terapias/logo_sgr.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/terapias/logo_sgr.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva Carga",
+      "url": "/terapias/subir_documentos.php"
+    },
+    {
+      "name": "Ver Historial",
+      "url": "/terapias/historial.php"
     }
   ]
 }

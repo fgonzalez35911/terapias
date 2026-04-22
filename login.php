@@ -21,8 +21,8 @@ if(isset($_SESSION['usuario_id'])) {
         <h2 class="text-center">Ingreso SGR</h2>
         <form id="loginForm">
             <div class="form-group">
-                <label>Usuario</label>
-                <input type="text" id="usuario" class="form-control" required>
+                <label>Usuario o Email</label>
+                <input type="text" id="usuario" class="form-control" placeholder="Ej: bgomez o correo@..." required>
             </div>
             <div class="form-group">
                 <label>Contraseña</label>

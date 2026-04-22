@@ -1,8 +1,9 @@
 <?php
 session_start();
 require_once 'db.php';
+require_once 'includes/roles.php';
 
-if (!isset($_SESSION['usuario_id']) || $_SERVER['REQUEST_METHOD'] != 'POST') {
+if (!tienePermiso('configuracion_sistema')) {
     echo json_encode(['status' => 'error', 'message' => 'No autorizado']);
     exit;
 }
@@ -10,23 +11,30 @@ if (!isset($_SESSION['usuario_id']) || $_SERVER['REQUEST_METHOD'] != 'POST') {
 $accion = $_POST['accion'] ?? '';
 
 try {
-    if ($accion === 'perfil') {
-        $stmt = $pdo->prepare("UPDATE usuarios SET nombre_completo = ?, dni = ? WHERE id = ?");
-        $stmt->execute([$_POST['nombre'], $_POST['dni'], $_SESSION['usuario_id']]);
+    if ($accion === 'template') {
+        $stmt = $pdo->prepare("UPDATE configuracion SET asunto_predeterminado = ?, cuerpo_email_base = ? WHERE id = 1");
+        $stmt->execute([$_POST['asunto'], $_POST['cuerpo']]);
         echo json_encode(['status' => 'success']);
 
     } elseif ($accion === 'smtp') {
-        $stmt = $pdo->prepare("UPDATE configuracion SET smtp_host = ?, smtp_port = ?, smtp_user = ?, smtp_pass = ?, email_reintegros = ? WHERE id = 1");
-        $stmt->execute([$_POST['host'], $_POST['port'], $_POST['user'], $_POST['pass'], $_POST['destino']]);
+        $stmt = $pdo->prepare("UPDATE configuracion SET smtp_host = ?, smtp_user = ?, smtp_pass = ?, email_reintegros = ? WHERE id = 1");
+        $stmt->execute([$_POST['host'], $_POST['user'], $_POST['pass'], $_POST['destino']]);
         echo json_encode(['status' => 'success']);
 
-    } elseif ($accion === 'firma') {
-        // Guardamos la firma en Base64 directamente en la tabla usuarios
-        $stmt = $pdo->prepare("UPDATE usuarios SET firma_digital = ? WHERE id = ?");
-        $stmt->execute([$_POST['firma_b64'], $_SESSION['usuario_id']]);
+    } elseif ($accion === 'guardar_config_alertas') {
+        foreach ($_POST as $evento => $usuarios_array) {
+            if ($evento == 'accion') continue;
+            $ids = implode(',', $usuarios_array);
+            $pdo->prepare("INSERT INTO config_notificaciones (evento, usuarios_destino) VALUES (?, ?) ON DUPLICATE KEY UPDATE usuarios_destino = ?")
+                ->execute([$evento, $ids, $ids]);
+        }
+        echo json_encode(['status' => 'success']);
+
+    } elseif ($accion === 'limpiar_datos') {
+        // Lógica de limpieza que ya teníamos...
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0; TRUNCATE TABLE archivos_adjuntos; TRUNCATE TABLE reintegros; SET FOREIGN_KEY_CHECKS = 1;");
         echo json_encode(['status' => 'success']);
     }
-} catch (PDOException $e) {
+} catch (Exception $e) {
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
 }
-?>
