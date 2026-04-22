@@ -13,19 +13,20 @@ $user = $stmtU->fetch();
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
 <style>
+    /* Declaramos todas las variantes posibles que busca ARCA */
+    @font-face { font-family: 'Arial'; src: url('fonts/ARIAL.TTF') format('truetype'); }
+    @font-face { font-family: 'ArialMT'; src: url('fonts/ARIAL.TTF') format('truetype'); }
+    @font-face { font-family: 'Arial-BoldMT'; src: url('fonts/ARIALBD.TTF') format('truetype'); }
+    @font-face { font-family: 'CourierNewPSMT'; src: url('fonts/cour.ttf') format('truetype'); }
+
     .fullscreen-mode {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        z-index: 9998 !important;
-        border-radius: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
+        position: fixed !important; top: 0 !important; left: 0 !important;
+        width: 100vw !important; height: 100vh !important;
+        z-index: 9998 !important; border-radius: 0 !important;
     }
 </style>
 
@@ -411,8 +412,9 @@ function agregarAclaracion() {
 
     let t = new fabric.Text(`${document.getElementById('user_nombre').value}\nDNI: ${document.getElementById('user_dni').value}`, {
         left: cx, top: cy, originX: 'center', originY: 'center', 
-        fontSize: esCelular ? 12 : 20, // Letra chica en celular, normal en PC
-        textAlign: 'center', fontWeight: 'bold'
+        fontSize: esCelular ? 12 : 20,
+        textAlign: 'center',
+        fontFamily: 'Arial-BoldMT'
     });
     canvas.add(t); canvas.setActiveObject(t);
     document.getElementById('fab_menu').classList.remove('active');
@@ -500,28 +502,54 @@ document.getElementById('archivo_upload').addEventListener('change', e => {
     let file = e.target.files[0]; if(!file) return;
     document.getElementById('controles_formulario').classList.remove('hidden');
     document.getElementById('fab_menu').classList.remove('hidden');
-    Swal.fire({ title: 'IA Analizando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    Swal.fire({ title: 'Procesando Calidad Máxima...', text: 'Esto puede tardar 5 segundos', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     esPdfOriginal = (file.type === 'application/pdf');
 
     let reader = new FileReader();
-    reader.onload = f => {
+    reader.onload = async f => {
+        await document.fonts.ready; // Esperar a las fuentes TTF
+
         if(esPdfOriginal) {
             originalPdfBytes = new Uint8Array(f.target.result);
-            pdfjsLib.getDocument(originalPdfBytes).promise.then(pdf => pdf.getPage(1).then(page => {
-                let vp = page.getViewport({ scale: 3.5 }), tc = document.createElement('canvas');
+            pdfjsLib.getDocument({data: originalPdfBytes, disableFontFace: false}).promise.then(pdf => pdf.getPage(1).then(page => {
+                // ESCALA 5.0 para nitidez absoluta del QR y letras
+                let vp = page.getViewport({ scale: 5.0 });
+                let tc = document.createElement('canvas');
+                let ctx = tc.getContext('2d');
+                
                 tc.height = vp.height; tc.width = vp.width;
-                page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise.then(() => {
-                    let data = tc.toDataURL('image/png'); 
-                    fabric.Image.fromURL(data, img => {
+                
+                // TRUCO: Desactivar suavizado para que el QR no se borronee
+                ctx.imageSmoothingEnabled = false;
+                ctx.webkitImageSmoothingEnabled = false;
+
+                page.render({ 
+                    canvasContext: ctx, 
+                    viewport: vp,
+                    intent: 'print' // FUERZA EL ESPACIADO CORRECTO DE LETRAS
+                }).promise.then(() => {
+                    let dataHighRes = tc.toDataURL('image/png');
+                    
+                    // Imagen liviana para la IA (escala 1.0) para que no se clave
+                    let vpIA = page.getViewport({ scale: 1.0 });
+                    let tcIA = document.createElement('canvas');
+                    tcIA.height = vpIA.height; tcIA.width = vpIA.width;
+                    page.render({ canvasContext: tcIA.getContext('2d'), viewport: vpIA }).promise.then(() => {
+                        ejecutarIA(tcIA.toDataURL('image/png'));
+                    });
+
+                    fabric.Image.fromURL(dataHighRes, img => {
                         let r = (document.getElementById('canvas_container').clientWidth - 20) / img.width;
                         canvas.setWidth(img.width * r); canvas.setHeight(img.height * r);
                         canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), { scaleX: r, scaleY: r });
                     });
-                    ejecutarIA(data);
                 });
-            }));
+            })).catch(err => { Swal.close(); Swal.fire('Error', 'No se pudo leer el PDF', 'error'); });
         } else {
+            // Lógica para imágenes normales
             originalImageSrc = f.target.result;
             fabric.Image.fromURL(originalImageSrc, img => {
                 let r = (document.getElementById('canvas_container').clientWidth - 20) / img.width;
@@ -534,34 +562,42 @@ document.getElementById('archivo_upload').addEventListener('change', e => {
     if(esPdfOriginal) reader.readAsArrayBuffer(file); else reader.readAsDataURL(file);
 });
 
-function ejecutarIA(data) {
-    Tesseract.recognize(data, 'spa').then(({ data: { text } }) => {
-        let t = text.replace(/\n/g, ' '), tl = t.toLowerCase();
-        terapeutasDB.forEach(th => { if(tl.includes(th.nombre.toLowerCase().split(' ')[0])) document.getElementById('terapeuta_id').value = th.id; });
-        let mBen = t.match(/(?:Paciente|Beneficiario|Nombre)[\s:]*([A-Za-z\s]+)(?:DNI|Periodo|Obra|54)/i);
-        let mPre = t.match(/(?:Prestaci[oó]n|Servicio)[\s:]*([A-Za-z\sÁÉÍÓÚáéíóú]+)/i);
+function ejecutarIA(imgSrc) {
+    Tesseract.recognize(imgSrc, 'spa', { 
+        logger: m => console.log(m) 
+    }).then(({ data: { text } }) => {
+        const lineas = text.split('\n');
+        let montoEncontrado = "";
+        let fechaEncontrada = "";
         
-        if(document.getElementById('titulo_editor').innerText === 'Factura') {
-            if(mBen) document.getElementById('paciente_f').value = mBen[1].trim();
-            if(mPre) document.getElementById('prestacion_f').value = mPre[1].split('8,00')[0].trim();
-            let mTotal = t.match(/Importe Total[\s:\$]*([\d\.,]+)/i);
-            if(mTotal) document.getElementById('monto_total').value = parseFloat(mTotal[1].replace(/\./g, '').replace(',', '.'));
-            let mFecha = t.match(/Emisi[oó]n[\s:]*(\d{2}\/\d{2}\/\d{4})/i);
-            if(mFecha) document.getElementById('fecha_f').value = mFecha[1];
-            let mCant = t.match(/(\d+)[,\.]\d{2}\s*unidades/i);
-            if(mCant) document.getElementById('sesiones_f').value = mCant[1];
-        } else {
-            if(mBen) document.getElementById('paciente_p').value = mBen[1].trim();
-            if(mPre) document.getElementById('prestacion_p').value = mPre[1].trim();
-        }
-        Swal.fire('IA Lista', 'Revisá los datos', 'success');
+        lineas.forEach(l => {
+            if(l.includes('$')) {
+                let m = l.match(/\d+[\.,]\d+/);
+                if(m) montoEncontrado = m[0];
+            }
+            if(l.match(/\d{2}\/\d{2}\/\d{4}/)) {
+                let f = l.match(/\d{2}\/\d{2}\/\d{4}/);
+                if(f) fechaEncontrada = f[0];
+            }
+        });
+
+        if(montoEncontrado) document.getElementById('monto_total').value = montoEncontrado.replace(',','.');
+        if(fechaEncontrada) document.getElementById('fecha_f').value = fechaEncontrada.split('/').reverse().join('-');
+
+        Swal.close();
+        document.getElementById('pantalla_eleccion').classList.add('hidden');
+        document.getElementById('pantalla_editor').classList.remove('hidden');
+    }).catch(err => {
+        console.error(err);
+        Swal.close();
+        document.getElementById('pantalla_eleccion').classList.add('hidden');
+        document.getElementById('pantalla_editor').classList.remove('hidden');
     });
 }
 
-function guardarYProcesar() {
+async function guardarYProcesar() {
     let fd = new FormData(), tipo = document.getElementById('titulo_editor').innerText;
     let t_id = document.getElementById('terapeuta_id').value;
-    
     if (!t_id) { Swal.fire('Error', 'Seleccioná un terapeuta.', 'error'); return; }
 
     fd.append('terapeuta_id', t_id);
@@ -579,21 +615,78 @@ function guardarYProcesar() {
         fd.append('beneficiario', document.getElementById('paciente_p').value);
         fd.append('prestacion', document.getElementById('prestacion_p').value);
     }
-    
+
     canvas.discardActiveObject().renderAll();
-    Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    
-    fd.append('imagen_hd', canvas.toDataURL({ format: 'png', multiplier: 2 }));
-    
-    fetch('ajax_guardar_documento.php', { method: 'POST', body: fd })
-    .then(r => r.json())
-    .then(d => { 
+    Swal.fire({ title: 'Procesando PDF Original...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        if (esPdfOriginal && originalPdfBytes) {
+            // USAMOS PDF-LIB PARA INYECTAR EN EL ORIGINAL
+            const pdfDoc = await PDFLib.PDFDocument.load(originalPdfBytes);
+            const pages = pdfDoc.getPages();
+            const firstPage = pages[0];
+            const { width, height } = firstPage.getSize();
+
+            // Calculamos la escala entre el canvas visual y el PDF real
+            const scaleX = width / canvas.getWidth();
+            const scaleY = height / canvas.getHeight();
+
+            const objetos = canvas.getObjects();
+            for (const obj of objetos) {
+                if (obj.type === 'image') {
+                    const imgUrl = obj.toDataURL();
+                    const imgBytes = await fetch(imgUrl).then(res => res.arrayBuffer());
+                    const embeddedImg = await pdfDoc.embedPng(imgBytes);
+                    
+                    firstPage.drawImage(embeddedImg, {
+                        x: obj.left * scaleX - (obj.width * obj.scaleX * scaleX / 2),
+                        y: height - (obj.top * scaleY) - (obj.height * obj.scaleY * scaleY / 2),
+                        width: obj.width * obj.scaleX * scaleX,
+                        height: obj.height * obj.scaleY * scaleY,
+                    });
+                } else if (obj.type === 'text' || obj.type === 'i-text') {
+                    firstPage.drawText(obj.text, {
+                        x: obj.left * scaleX - (obj.width * scaleX / 2),
+                        y: height - (obj.top * scaleY) - (obj.height * scaleY / 2),
+                        size: obj.fontSize * scaleX,
+                        color: PDFLib.rgb(0, 0, 0),
+                    });
+                }
+            }
+            const pdfBytes = await pdfDoc.save();
+            fd.append('pdf_final', new Blob([pdfBytes], { type: 'application/pdf' }), 'documento_firmado.pdf');
+        } else {
+            // Si es una imagen, seguimos usando el multiplier HD
+            let mult = canvas.backgroundImage ? (canvas.backgroundImage.width / canvas.getWidth()) : 2;
+            fd.append('imagen_hd', canvas.toDataURL({ format: 'png', multiplier: mult }));
+        }
+
+        const res = await fetch('ajax_guardar_documento.php', { method: 'POST', body: fd });
+        const d = await res.json();
         if(d.status === 'success') {
-            window.location.href = 'index.php'; 
+            window.location.href = 'index.php';
         } else {
             Swal.fire('Error', d.message, 'error');
         }
-    }).catch(() => Swal.fire('Error', 'Problema de conexión al guardar.', 'error'));
+    } catch (err) {
+        // PLAN B: Si el PDF tiene protección de ARCA, sacamos una "foto" HD del documento firmado
+        console.warn("PDF protegido detectado. Usando captura de alta fidelidad.");
+        
+        let mult = canvas.backgroundImage ? (canvas.backgroundImage.width / canvas.getWidth()) : 2;
+        fd.append('imagen_hd', canvas.toDataURL({ format: 'png', multiplier: mult }));
+        
+        try {
+            const res = await fetch('ajax_guardar_documento.php', { method: 'POST', body: fd });
+            const d = await res.json();
+            if(d.status === 'success') {
+                window.location.href = 'index.php';
+            } else {
+                Swal.fire('Error', d.message, 'error');
+            }
+        } catch (postErr) {
+            Swal.fire('Error', 'Problema de conexión al guardar el documento.', 'error');
+        }
+    }
 }
 </script>
 <?php include 'includes/footer.php'; ?>

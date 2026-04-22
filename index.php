@@ -161,24 +161,30 @@ function editarReintegro(id) {
 
 function eliminarReintegro(id) {
     Swal.fire({
-        title: '¿Eliminar este registro?',
-        text: "Esta acción borrará el reintegro y su archivo adjunto para siempre.",
+        title: '¿Estás seguro?',
+        text: "Esta acción eliminará el registro y el archivo PDF permanentemente.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        confirmButtonText: 'Sí, eliminar'
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar ahora',
+        cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
             let fd = new FormData();
             fd.append('action', 'eliminar');
             fd.append('id', id);
+
             fetch('ajax_reintegros.php', { method: 'POST', body: fd })
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success') {
-                    Swal.fire('Eliminado', '', 'success').then(() => location.reload());
-                } else { Swal.fire('Error', data.message, 'error'); }
-            });
+                    Swal.fire('¡Borrado!', 'El registro ha sido eliminado del sistema.', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', data.message || 'No se pudo eliminar.', 'error');
+                }
+            })
+            .catch(err => Swal.fire('Error', 'Problema de conexión con el servidor.', 'error'));
         }
     });
 }

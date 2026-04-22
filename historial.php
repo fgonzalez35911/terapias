@@ -119,18 +119,18 @@ $meses_nombres = [1=>'Enero', 2=>'Febrero', 3=>'Marzo', 4=>'Abril', 5=>'Mayo', 6
                 <?php if(count($reintegros) > 0): ?>
                     <?php foreach($reintegros as $r): 
                         // Colores alineados a la base de datos real
+                        $estado_actual = !empty($r['estado']) ? $r['estado'] : 'Pendiente';
                         $clase_estado = 'st-pendiente';
-                        if(($r['estado']??'') == 'Firmado') $clase_estado = 'st-firmado';
-                        if(($r['estado']??'') == 'Enviado') $clase_estado = 'st-enviado';
-                        if(in_array(($r['estado']??''), ['Recibido', 'Pagado Parcial'])) $clase_estado = 'st-recibido';
-                        if(($r['estado']??'') == 'Pagado Total') $clase_estado = 'st-pagado';
-                        
+                        if($estado_actual == 'Firmado') $clase_estado = 'st-firmado';
+                        if($estado_actual == 'Enviado') $clase_estado = 'st-enviado';
+                        if(in_array($estado_actual, ['Recibido', 'Pagado Parcial'])) $clase_estado = 'st-recibido';
+                        if($estado_actual == 'Pagado Total') $clase_estado = 'st-pagado';
                         ?>
                     <tr>
                         <td style="font-weight: bold; color: var(--text-light);">#<?php echo str_pad($r['id'], 4, '0', STR_PAD_LEFT); ?></td>
                         <td style="font-weight: 600;"><?php echo htmlspecialchars($r['terapeuta'] ?? 'Sin asignar'); ?></td>
                         <td><?php echo isset($meses_nombres[$r['mes_correspondiente']]) ? $meses_nombres[$r['mes_correspondiente']] : '-'; ?> / <?php echo htmlspecialchars($r['anio_correspondiente'] ?? '-'); ?></td>
-                        <td><span class="badge-estado <?php echo $clase_estado; ?>"><?php echo htmlspecialchars($r['estado'] ?? 'Pendiente'); ?></span></td>
+                        <td><span class="badge-estado <?php echo $clase_estado; ?>"><?php echo htmlspecialchars($estado_actual); ?></span></td>
                         <td class="small text-muted"><?php echo htmlspecialchars($r['fecha_envio'] ?? 'Reciente'); ?></td>
                         <td style="display: flex; gap: 5px;">
                             <?php if(!empty($r['ruta_archivo'])): ?>
@@ -190,16 +190,31 @@ function eliminarReintegro(id) {
 }
 
 function cambiarEstado(id, nuevoEstado) {
-    let fd = new FormData();
-    fd.append('action', 'cambiar_estado');
-    fd.append('id', id);
-    fd.append('estado', nuevoEstado);
-    fetch('ajax_reintegros.php', { method: 'POST', body: fd })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'success') {
-            Swal.fire('Estado Actualizado', '', 'success').then(() => location.reload());
-        } else { Swal.fire('Error', data.message, 'error'); }
+    const accionTexto = nuevoEstado === 'Recibido' ? 'marcar como APROBADO' : 'marcar como RECHAZADO';
+    
+    Swal.fire({
+        title: '¿Confirmar cambio?',
+        text: `Estás por ${accionTexto} este registro.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, confirmar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            let fd = new FormData();
+            fd.append('action', 'cambiar_estado');
+            fd.append('id', id);
+            fd.append('estado', nuevoEstado);
+            fetch('ajax_reintegros.php', { method: 'POST', body: fd })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    Swal.fire('¡Listo!', 'El estado ha sido actualizado.', 'success').then(() => location.reload());
+                } else { 
+                    Swal.fire('Error', data.message, 'error'); 
+                }
+            });
+        }
     });
 }
 </script>
