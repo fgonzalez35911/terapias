@@ -6,7 +6,7 @@
     <title>SGR - Reintegros IOSFA</title>
     <link rel="manifest" href="/terapias/manifest.json">
     <meta name="theme-color" content="#2c3e50">
-    <link rel="stylesheet" href="/terapias/assets/css/style.css?v=6">
+    <link rel="stylesheet" href="/terapias/assets/css/style.css?v=3">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>

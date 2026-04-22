@@ -20,11 +20,14 @@ try {
     ]);
     
     $r_id = $pdo->lastInsertId();
+    // Reparador de Base64 para que la imagen no se corrompa en Hostinger
     $data = base64_decode(str_replace(' ', '+', str_replace('data:image/png;base64,', '', $_POST['imagen_hd'])));
     $tmp = 'uploads/temp_'.$r_id.'.png';
     file_put_contents($tmp, $data);
 
-    $pdf = new FPDF(); $pdf->AddPage(); $pdf->Image($tmp, 0, 0, 210, 297);
+    $pdf = new FPDF(); 
+    $pdf->AddPage(); 
+    $pdf->Image($tmp, 0, 0, 210, 297);
     $ruta = 'uploads/reintegro_'.$r_id.'.pdf';
     $pdf->Output('F', $ruta);
     unlink($tmp);
@@ -33,4 +36,7 @@ try {
         ->execute([$r_id, basename($ruta), $ruta]);
 
     echo json_encode(['status' => 'success']);
-} catch (Exception $e) { echo json_encode(['status' => 'error', 'message' => $e->getMessage()]); }
+} catch (Exception $e) { 
+    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]); 
+}
+?>
